@@ -17,24 +17,25 @@ import androidx.core.content.ContextCompat
 
 class MainActivity : ComponentActivity() {
 
-    // Native functions (stubs): implement in C++ and wire to whisper.cpp / llama.cpp
-    external fun initNative(): Boolean
-    external fun startSTT(): String?
-    external fun stopSTT(): Boolean
-    external fun sendToLLM(input: String): String?
-    external fun ttsSpeak(text: String)
-
-    companion object {
-        init {
-            System.loadLibrary("localvoice")
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // init native libs
-        initNative()
+        // Example: ensure models exist and init
+        val whisperRel = "models/whisper-small.bin"
+        val llamaRel = "models/llama-7b-q4.bin"
+
+        ModelManager.ensureModelDownloaded(this, whisperRel) { ok ->
+            if (ok) {
+                val path = ModelManager.modelPath(this, whisperRel)
+                NativeBridge.initWhisper(path)
+            }
+        }
+        ModelManager.ensureModelDownloaded(this, llamaRel) { ok ->
+            if (ok) {
+                val path = ModelManager.modelPath(this, llamaRel)
+                NativeBridge.initLlama(path)
+            }
+        }
 
         val requestPermissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestPermission()
@@ -61,16 +62,16 @@ class MainActivity : ComponentActivity() {
                 Button(onClick = {
                     recording = !recording
                     if (recording) {
-                        // start STT in native
-                        val t = startSTT()
+                        // In a real app you'd record audio to a file and pass the file path here.
+                        // For this scaffold we expect an existing WAV file in app storage for demonstration.
+                        val sampleWav = "${filesDir.absolutePath}/sample_input.wav"
+                        val t = NativeBridge.transcribeFile(sampleWav)
                         transcript = t ?: ""
-                        // send to LLM
-                        val llm = sendToLLM(transcript)
+                        val llm = NativeBridge.generate(transcript ?: "", 128)
                         response = llm ?: ""
-                        // speak response
-                        ttsSpeak(response)
+                        NativeBridge.ttsSpeak(response ?: "")
                     } else {
-                        stopSTT()
+                        // stop recording flow
                     }
                 }) {
                     Text(if (recording) "Stop" else "Record & Send")
