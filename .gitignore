@@ -1,0 +1,21 @@
+# Gradle / Android
+.gradle/
+/local.properties
+/.idea/
+/build/
+/captures/
+
+# Native
+*.so
+
+# Misc
+*.iml
+*.log
+
+# Android Studio
+.idea/
+.gradle/
+local.properties
+
+# OS
+.DS_Store
